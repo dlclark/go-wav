@@ -35,6 +35,17 @@ func (r *Reader) Format() (format *WavFormat, err error) {
 	return
 }
 
+func (r *Reader) Data() (*WavData, error) {
+	if r.WavData == nil {
+		data, err := r.readData()
+		if err != nil {
+			return nil, err
+		}
+		r.WavData = data
+	}
+	return r.WavData, nil
+}
+
 func (r *Reader) Read(p []byte) (n int, err error) {
 	if r.WavData == nil {
 		data, err := r.readData()

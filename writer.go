@@ -33,17 +33,20 @@ func NewWriter(w io.Writer, numSamples uint32, numChannels uint16, sampleRate ui
 func (w *Writer) WriteSamples(samples []Sample) (err error) {
 	bitsPerSample := w.Format.BitsPerSample
 	numChannels := w.Format.NumChannels
+	raw := make([]byte, bitsPerSample/8)
 
-	var i, b uint16
 	for _, sample := range samples {
-		for i = 0; i < numChannels; i++ {
-			value := toUint(sample.Values[i], int(bitsPerSample))
+		for i := uint16(0); i < numChannels; i++ {
+			value := toUint(sample.Values[i], bitsPerSample)
 
-			for b = 0; b < bitsPerSample; b += 8 {
-				err = binary.Write(w, binary.LittleEndian, uint8((value>>b)&math.MaxUint8))
-				if err != nil {
-					return
-				}
+			// set our raw bytes
+			for b := uint16(0); b < bitsPerSample; b += 8 {
+				raw[b/8] = uint8((value >> b) & math.MaxUint8)
+			}
+
+			// write the sample
+			if _, err := w.Write(raw); err != nil {
+				return err
 			}
 		}
 	}
@@ -51,7 +54,7 @@ func (w *Writer) WriteSamples(samples []Sample) (err error) {
 	return
 }
 
-func toUint(value int, bits int) uint {
+func toUint(value int, bits uint16) uint {
 	var result uint
 
 	switch bits {
@@ -63,7 +66,7 @@ func toUint(value int, bits int) uint {
 		result = uint(value)
 	default:
 		if value < 0 {
-			result = uint((1 << uint(bits)) + value)
+			result = uint((1 << bits) + value)
 		} else {
 			result = uint(value)
 		}
